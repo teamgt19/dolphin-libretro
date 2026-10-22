@@ -8,6 +8,7 @@ add_library(dolphin_libretro SHARED
   Main.cpp
   Video.cpp
   VR.cpp
+  RaveTrack.cpp
 )
 
 if(ENABLE_VULKAN)

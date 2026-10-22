@@ -43,6 +43,7 @@
 #include "InputCommon/ControllerEmu/Control/Control.h"
 #include "InputCommon/ControllerEmu/ControlGroup/Attachments.h"
 #include "InputCommon/ControllerEmu/ControlGroup/IRPassthrough.h"
+#include "DolphinLibretro/RaveTrack.h"
 #include "InputCommon/ControllerEmu/Setting/NumericSetting.h"
 #include "InputCommon/ControllerInterface/ControllerInterface.h"
 #include "InputCommon/GCAdapter.h"
@@ -664,8 +665,9 @@ void InitSensors()
     port_max = (Core::System::GetInstance().IsWii() &&
       Libretro::Options::GetCached<int>(Libretro::Options::sysconf::ALT_GC_PORTS_ON_WII)) ? 8 : 4;
 
-    // In VR the right controller moves player 1's Wiimote.
-    s_vr_motion = Libretro::VR::IsEnabled();
+    // In VR the right controller moves player 1's Wiimote - the frontend's VR mode, or RAVE's VR hands
+    // (Local\RAVE_TRACK_V1: RAVE runs in VR around this core).
+    s_vr_motion = Libretro::VR::IsEnabled() || Libretro::RaveTrack::Present();
 
     for (int i = 0; i < port_max; i++)
     {

@@ -12,6 +12,7 @@
 #include "DolphinLibretro/Common/Globals.h"
 #include "DolphinLibretro/Common/Options.h"
 #include "DolphinLibretro/Input.h"
+#include "DolphinLibretro/RaveTrack.h"
 #include "VideoCommon/Present.h"
 #include "VideoCommon/VertexShaderManager.h"
 #include "VideoCommon/VideoConfig.h"
@@ -150,6 +151,32 @@ static void UpdateVRMotion()
   float accel[3] = {0.0f, 0.0f, G};  // at rest, level
   float gyro[3] = {};
   float point[2] = {};
+
+  // RAVE: the main hand as RAVE tracks it (rave_track.h) - its own accelerometer + gyro readings and the exact spot
+  // its pointing ray hits on the game's picture. RAVE's axes are Unity's (left-handed): controller x right, y up,
+  // z forward; rotations by the left-hand rule. Into the remote's (+X right, +Y up, +Z back, right-handed): z flips,
+  // and for a rotation x and y flip too; then into the Wiimote's (+X left, +Y back, +Z up) as below.
+  rave_track_hand rave{};
+  if (RaveTrack::ReadHand(0, rave))
+  {
+    const Common::Vec3 a(rave.accel[0], rave.accel[1], -rave.accel[2]);
+    const Common::Vec3 w(-rave.gyro[0], -rave.gyro[1], rave.gyro[2]);
+    accel[0] = -a.x;
+    accel[1] = a.z;
+    accel[2] = a.y;
+    gyro[0] = -w.x;
+    gyro[1] = w.z;
+    gyro[2] = w.y;
+    if (rave.flags & RAVE_HAND_AIM_ON_SCREEN)
+    {
+      // the picture's edges = the pointer's edges (u, v 0..1 with v down -> -1..1 with up positive)
+      point[0] = std::clamp(rave.aim_uv[0] * 2.0f - 1.0f, -1.0f, 1.0f);
+      point[1] = std::clamp(1.0f - rave.aim_uv[1] * 2.0f, -1.0f, 1.0f);
+    }
+    s_have_controller_velocity = false;
+    Input::SetVRMotion(0, accel, gyro, point);
+    return;
+  }
 
   retro_vr_controller_poses poses{};
   const retro_vr_hand_state& hand = poses.hands[RETRO_VR_HAND_RIGHT];
@@ -317,6 +344,7 @@ void Shutdown()
   s_frontend_flat = false;
   s_have_controller_velocity = false;
   s_have_point_forward = false;
+  RaveTrack::Close();
 }
 }  // namespace VR
 }  // namespace Libretro
